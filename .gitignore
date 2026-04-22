@@ -226,6 +226,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+
+# IDE
+.vscode/
+
 # CUSTOM
 
 dev/
