@@ -8,7 +8,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-real-time-market-anomaly-detection = "real_time_market_anomaly_detection:main"
+market-anomaly = "market_anomaly:main"
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]
