@@ -1,14 +1,16 @@
 [project]
-name = "real-time-market-anomaly-detection"
+name = "market-anomaly"
 version = "0.1.0"
 description = "Real-Time Market Anomaly Detection"
 readme = "README.md"
 authors = [{ name = "adiacov", email = "diacovmd@gmail.com" }]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "pydantic-settings[yaml]>=2.14.0",
+]
 
 [project.scripts]
-market-anomaly = "market_anomaly:main"
+market-anomaly = "market_anomaly.main:main"
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]

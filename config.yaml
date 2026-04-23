@@ -18,7 +18,7 @@ stream:
 # Raw Tickers Kafka Producer: Settings for sending raw ticker data to Kafka
 raw_ticker_producer:
   topic: raw-ticks
-  bootstrap_servers: [ "localhost:19092" ]
+  bootstrap_servers: "localhost:19092"
   client_id: raw_ticks_producer
   num_partitions: 1
   replication_factor: 1
@@ -26,24 +26,24 @@ raw_ticker_producer:
 # Raw Tickers Kafka Consumer: Settings for consuming raw ticker data from Kafka
 raw_ticker_consumer:
   topics: [ "raw-ticks" ]
-  bootstrap_servers: [ "localhost:19092" ]
+  bootstrap_servers: "localhost:19092"
   group_id: raw-ticks-processor
   client_id: raw_ticks_consumer
   auto_offset_reset: latest
   enable_auto_commit: false
 
 # Anomalies Kafka Producer: Settings for sending detected anomalies to Kafka
-anomalies_producer:
+anomaly_producer:
   topic: anomalies
-  bootstrap_servers: [ "localhost:19092" ]
+  bootstrap_servers: "localhost:19092"
   client_id: anomalies_producer
   num_partitions: 1
   replication_factor: 1
 
 # Anomalies Kafka Consumer: Settings for consuming anomaly data from Kafka
-anomalies_consumer:
+anomaly_consumer:
   topics: [ "anomalies" ]
-  bootstrap_servers: [ "localhost:19092" ]
+  bootstrap_servers: "localhost:19092"
   group_id: anomalies-processor
   client_id: anomalies-consumer
   auto_offset_reset: latest
