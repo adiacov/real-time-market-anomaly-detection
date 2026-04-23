@@ -84,7 +84,7 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - streaming_market_data:/var/lib/postgresql
+      - streaming_market_data:/var/lib/postgresql/data
     networks:
       - market_anomaly_network
     healthcheck:
