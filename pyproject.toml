@@ -8,11 +8,12 @@ requires-python = ">=3.12"
 dependencies = [
     "kafka-python>=2.3.1",
     "pydantic-settings[yaml]>=2.14.0",
+    "requests>=2.33.1",
 ]
 
 [project.scripts]
 create-topics="market_anomaly.kafka.init_topics:create_topics"
-produce = "market_anomaly.producer.main:main"
+produce = "market_anomaly.kafka.producer.main:main"
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]
