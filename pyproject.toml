@@ -12,8 +12,9 @@ dependencies = [
 ]
 
 [project.scripts]
-create-topics="market_anomaly.kafka.init_topics:create_topics"
+create-topics = "market_anomaly.kafka.init_topics:create_topics"
 produce = "market_anomaly.kafka.producer.main:main"
+process = "market_anomaly.kafka.processor.main:main"
 
 [build-system]
 requires = ["uv_build>=0.9.13,<0.10.0"]
