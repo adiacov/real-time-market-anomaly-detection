@@ -19,10 +19,12 @@ CREATE TABLE IF NOT EXISTS public.quote (
     price_change DECIMAL(15, 4),
     -- Calculated percentage change
     price_change_percent DECIMAL(15, 4),
-    -- Unix timestamp of the quote
-    created_at TIMESTAMPTZ NOT NULL,
+    -- Quote creation Unix timestamp
+    timestamp BIGINT NOT NULL,
+    -- Table record creation time
+    created_at TIMESTAMPTZ NOT NULL NOW(),
     -- Primary key on symbol and timestamp
-    CONSTRAINT symbol_timestamp UNIQUE (symbol, created_at)
+    CONSTRAINT symbol_timestamp UNIQUE (symbol, timestamp)
 );
 
 -- Anomaly table for storing market anomalies
@@ -30,16 +32,18 @@ CREATE TABLE IF NOT EXISTS public.quote (
 CREATE TABLE IF NOT EXISTS public.anomaly (
     -- Unique identifier for each anomaly record
     id UUID NOT NULL PRIMARY KEY,
-    -- Reference to the quote
-    quote_id UUID NOT NULL REFERENCES public.quote (id),
+    -- Quote creation Unix timestamp
+    quote_timestamp BIGINT NOT NULL,
     -- Stock symbol (e.g., 'AAPL')
     symbol TEXT NOT NULL,
     -- The anomaly price
     price DECIMAL(15, 4),
     -- Anomaly z-score
     price_z_score DECIMAL(15, 2),
-    -- Timestamp when the anomaly was detected
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    -- Table record creation time
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    -- Enforces that a matching quote must exist in the system
+    FOREIGN KEY (symbol, quote_timestamp) REFERENCES public.quote (symbol, timestamp)
 );
 
 -- Explanation table for storing anomaly reason and details
@@ -53,7 +57,7 @@ CREATE TABLE IF NOT EXISTS public.anomaly_explanation (
     symbol TEXT NOT NULL,
     -- The AI-generated explanation text
     explanation TEXT,
-    -- The explanation creation time
+    -- Table record creation time
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

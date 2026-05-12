@@ -1,4 +1,4 @@
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, KafkaProducer
 from market_anomaly.config import app_config
 
 import json
@@ -14,20 +14,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Sample json with field name, example, description
-# {
-#   "c": 172.69,  // Current Price
-#   "d": 1.21,    // Change (d), previous day close: Price increased by $1.21
-#   "dp": 0.7058, // Percent Change (dp), previous day close: Price increased by 0.7058%
-#   "h": 173.07,  // High price of the day
-#   "l": 170.34,  // Low price of the day
-#   "o": 170.57,  // Open price of the day
-#   "pc": 171.48, // Previous close price
-#   "t": 1699563600 // Timestamp
-# }
 
-
-class Quote(BaseModel):
+class QuoteMessage(BaseModel):
     current_price: float = Field(alias="c")  #
     price_change: float | None = Field(alias="d")  #
     price_change_percent: float | None = Field(alias="dp")  #
@@ -50,12 +38,19 @@ class Quote(BaseModel):
         )
 
 
+class AnomalyMessage(BaseModel):
+    quote_timestamp: int
+    symbol: str
+    price: float
+    price_z_score: float
+
+
 def key_deserializer(key: bytes) -> str:
     return key.decode(encoding="utf8")
 
 
-def value_deserializer(value: bytes) -> Quote:
-    return Quote(**json.loads(value))
+def value_deserializer(value: bytes) -> QuoteMessage:
+    return QuoteMessage(**json.loads(value))
 
 
 def get_consumer():
@@ -85,24 +80,21 @@ def add_price_change(
         previous_quote_prices[quote_name] = quote_current_price
 
 
-def detect_anomaly(quote: str, prices: deque) -> bool:
-    """Detects a tick-to-tick price change anomaly.
-
-    Returns True if the last price change is an anomaly, False otherwise.
-    """
+def detect_anomaly(quote: str, prices: deque) -> float | None:
+    """Detects a tick-to-tick price change anomaly."""
 
     if len(prices) < app_config.stream.rolling_window_size or len(prices) == 0:
         logger.info(
             "Not enough price change info for quote %s. Continuing without anomaly detection.",
             quote,
         )
-        is_anomaly = False
+        z_score = None
     elif stdev(prices) == 0.0:
         logger.info(
             "Price didn't change for quote %s. Continuing anomaly detection for next tick.",
             quote,
         )
-        is_anomaly = False
+        z_score = None
     else:
         # Anomaly detection logic
         current_value = prices[-1]
@@ -111,13 +103,55 @@ def detect_anomaly(quote: str, prices: deque) -> bool:
 
         if is_anomaly:
             logger.warning("Detected price change anomaly for quote %s", quote)
+        else:
+            z_score = None
 
-    return is_anomaly
+    return z_score
 
 
-def process_message(message, is_anomaly):
-    # if anomaly -> publish to the anomaly topic
-    pass
+def get_anomaly_producer() -> KafkaProducer:
+    kafka_config = app_config.kafka
+    producer_config = app_config.anomaly_producer
+    configs = kafka_config.model_dump() | producer_config.model_dump()
+    return KafkaProducer(**configs)
+
+
+def create_anomaly_message(message, z_score: float) -> AnomalyMessage:
+    quote = message.value
+    return AnomalyMessage(
+        quote_timestamp=quote.timestamp,
+        symbol=message.key,
+        price=quote.current_price,
+        price_z_score=z_score,
+    )
+
+
+# TODO - kafka producer related code - extract (valid for KafkaProducer, callbacks)
+def on_send_success(record_metadata) -> None:
+    logger.info(
+        "Successfully published message to topic %s, partition %s, offset %s",
+        record_metadata.topic,
+        record_metadata.partition,
+        record_metadata.offset,
+    )
+
+
+def on_send_error(e) -> None:
+    logger.error("Failed to publish message", exc_info=e)
+
+
+def process_message(message, price_change_window: deque) -> None:
+    """Processes quote message"""
+
+    z_score = detect_anomaly(message.key, price_change_window)
+    if not z_score:
+        pass  # short circuit: in there is no anomaly, then skip
+
+    producer = get_anomaly_producer()
+    anomaly_msg = create_anomaly_message(message, z_score)
+    producer.send("anomaly", key=message.key, value=anomaly_msg).add_callback(
+        on_send_success
+    ).add_errback(on_send_error)
 
 
 def main():
@@ -149,9 +183,7 @@ def main():
                 price_change_window,
             )
 
-            # TODO - move anomaly detection to process_message
-            is_anomaly = detect_anomaly(quote_name, price_change_window)
-            process_message(message, is_anomaly)
+            process_message(message, price_change_window)
 
     finally:
         if consumer:
@@ -160,3 +192,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+# TODO - CONTINUE next - loop over all tickers
